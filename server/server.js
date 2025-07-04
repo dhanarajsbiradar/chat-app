@@ -7,50 +7,66 @@ import userRouter from "./routes/userRoutes.js";
 import messageRoute from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
 
-//create express app and HTTP server
+// Create Express app and HTTP server
 const app = express();
 const server = http.createServer(app);
 
-// Initialize socket.io server
+// ✅ Set your frontend domain here (deployed frontend URL)
+const FRONTEND_URL = "https://chat-app-nine-tan.vercel.app";
+
+// ✅ Initialize Socket.io server with CORS
 export const io = new Server(server, {
-    cors: { origin: "*" },
+    cors: {
+        origin: FRONTEND_URL,
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true,
+    },
 });
 
-// Stote online Users
-export const userSocketMap = {}; // {userId : socketId }
+// ✅ Store online users
+export const userSocketMap = {}; // { userId: socketId }
 
-// Socket.io connection handler
+// ✅ Socket.io connection logic
 io.on("connection", (socket) => {
     const userId = socket.handshake.query.userId;
-    console.log("user connected", userId);
+    console.log("User connected:", userId);
 
     if (userId) userSocketMap[userId] = socket.id;
 
-    //emit online users to all connected clients
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
     socket.on("disconnect", () => {
-        console.log("User disconnected", userId);
+        console.log("User disconnected:", userId);
         delete userSocketMap[userId];
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
 });
 
-//Middleware setup
+// ✅ Middleware
 app.use(express.json({ limit: "4mb" }));
-app.use(cors());
 
-// Routes setup
-app.use("/api/status", (req, res) => res.send("server is live"));
+// ✅ CORS for frontend domain only
+app.use(
+    cors({
+        origin: FRONTEND_URL,
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true,
+    })
+);
+
+// ✅ API routes
+app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRoute);
 
-//connect to MongoDB
+// ✅ Connect to MongoDB
 await connectDB();
 
+// ✅ Start server in dev OR export for Vercel
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => console.log("server is running on PORT : " + PORT));
+    server.listen(PORT, () => console.log("Server running on port", PORT));
 }
 
-//Export server for  Versel
+// ✅ Export for Vercel
 export default server;
