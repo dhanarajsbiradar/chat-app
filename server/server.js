@@ -11,7 +11,7 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Set your frontend domain here (deployed frontend URL)
+// ✅ Set your frontend domain here
 const FRONTEND_URL = "https://chat-app-nine-tan.vercel.app";
 
 // ✅ Initialize Socket.io server with CORS
@@ -45,7 +45,7 @@ io.on("connection", (socket) => {
 // ✅ Middleware
 app.use(express.json({ limit: "4mb" }));
 
-// ✅ CORS for frontend domain only
+// ✅ CORS middleware (allow frontend)
 app.use(
     cors({
         origin: FRONTEND_URL,
@@ -54,7 +54,17 @@ app.use(
     })
 );
 
-// ✅ API routes
+// ✅ Fix for CORS preflight requests (OPTIONS)
+app.options(
+    "*",
+    cors({
+        origin: FRONTEND_URL,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        credentials: true,
+    })
+);
+
+// ✅ Routes
 app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRoute);
@@ -62,11 +72,11 @@ app.use("/api/messages", messageRoute);
 // ✅ Connect to MongoDB
 await connectDB();
 
-// ✅ Start server in dev OR export for Vercel
+// ✅ Start server locally or export for Vercel
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => console.log("Server running on port", PORT));
 }
 
-// ✅ Export for Vercel
+// ✅ Export for Vercel deployment
 export default server;
